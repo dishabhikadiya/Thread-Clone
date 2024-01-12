@@ -1,0 +1,12 @@
+.content{
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+}
+.btn{
+    text-align: end;
+    margin-top: -19px;
+}
+.content p {
+    font-size: large;
+}

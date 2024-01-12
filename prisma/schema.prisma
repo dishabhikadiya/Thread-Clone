@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("URL")
+}
+
+model Session {
+  session_id  String    @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @unique
+  shop        String
+  state       String
+  isOnline    Boolean   @default(false)
+  scope       String?
+  expires     DateTime?
+  accessToken String
+  userId      BigInt?
+}
+
+model Shop {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  shop          String   @unique @map("shop")
+  accessToken   String   @map("accessToken")
+  phone         String?  @map("phone")
+  name          String   @map("name")
+  countryCode   String?  @map("countryCode")
+  countryName   String?  @map("countryName")
+  accessScope   String?  @map("accessScope")
+  timestamp     Int?     @map("timestamp")
+  domain        String?  @unique @map("domain")
+  email         String?  @map("email")
+  customerEmail String?  @map("customerEmail")
+  moneyFormat   String?  @map("moneyFormat")
+  appStatus     String?  @default("installed") @map("appStatus")
+  currency      String?  @map("currency")
+  timezone      String?  @map("timezone")
+  address1      String?  @map("address1")
+  address2      String?  @map("address2")
+  zip           String?  @map("zip")
+  city          String?  @map("city")
+  shopOwner     String?  @map("shopOwner")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model todo {
+  id       String     @id @default(auto()) @map("_id") @db.ObjectId
+  todo     String
+  status   String     @default("in-progress")
+  todolist todolist[]
+}
+
+model todolist {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  todo    todo?   @relation(fields: [todoId], references: [id])
+  todoId  String? @db.ObjectId
+  subTodo String
+  status  String  @default("in-progress")
+}
