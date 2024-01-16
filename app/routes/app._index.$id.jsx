@@ -6,6 +6,7 @@ import {
   useNavigate,
   useSubmit,
 } from "@remix-run/react";
+import * as Yup from "yup";
 import { Spinner } from "@shopify/polaris";
 import { Page, Frame } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
@@ -19,6 +20,7 @@ import DeleteSub from "./SubModel/DeleteSub";
 import UpdateSub from "./SubModel/UpdateSub";
 import Cards from "./Component/Cards";
 import Pagination from "./Component/Pagination";
+import { useFormik } from "formik";
 export const links = () => [{ rel: "stylesheet", href: pagecss }];
 export const loader = async ({ request, params }) => {
   await authenticate.admin(request);
@@ -184,11 +186,15 @@ export default function Index() {
     []
   );
 
-  const handleSubmit = () => {
-    submit({ todo: value, status: status }, { method: "POST" });
+  const handleSubmit = (values) => {
+    submit(
+      { todo: values.todoName, status: values.status },
+      { method: "POST" }
+    );
     setValue("");
     setStatus("");
   };
+
   const handlesudTodo = () => {
     submit({ subTodo: subTodo, status: subStatus, id: id }, { method: "PUT" });
     setsubTodo("");
@@ -198,9 +204,14 @@ export default function Index() {
     submit({ id: id }, { method: "DELETE" });
     setActiveDelete(false);
   };
-  const handleUpdate = () => {
+  const handleUpdate = (values) => {
     submit(
-      { id: id, todo: updateTodo, status: value1, apiKey: "put" },
+      {
+        id: id,
+        todo: updateTodo,
+        status: value1,
+        apiKey: "put",
+      },
       { method: "PUT" }
     );
   };
@@ -221,7 +232,7 @@ export default function Index() {
   const handleNextPage = () => {
     const newSkip = skip + take;
     setSkip(newSkip);
-    Navigate(`/app/${skip}`);
+    Navigate(`/app/${newSkip}`);
   };
 
   const handlePrevPage = () => {
@@ -229,6 +240,24 @@ export default function Index() {
     setSkip(newSkip);
     Navigate(`/app/${newSkip}`);
   };
+  const YourValidationSchema = Yup.object().shape({
+    todoName: Yup.string().required(),
+    status: Yup.string().required(),
+  });
+  const formik = useFormik({
+    initialValues: {
+      todoName: "",
+      status: "",
+    },
+    validationSchema: YourValidationSchema,
+    onSubmit: (values) => {
+      submit(
+        { todo: values.todoName, status: values.status },
+        { method: "POST" }
+      );
+      handleSubmit(values);
+    },
+  });
 
   useEffect(() => {
     if (actionData) {
@@ -294,6 +323,7 @@ export default function Index() {
           handleStatus={handleStatus}
           handleSubmit={handleSubmit}
           handleChangevalue={handleChangevalue}
+          formik={formik}
         />
       </Frame>
       <Frame>
@@ -329,6 +359,7 @@ export default function Index() {
           handleUpdate={handleUpdate}
           updateTodo={updateTodo}
           value1={value1}
+          formik={formik}
         />
       </Frame>
       <Frame>
