@@ -10,3 +10,30 @@
 .content p {
     font-size: large;
 }
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .filter-buttons {
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* Add your own styles as needed */
+  Button {
+    /* Add common styles for buttons */
+    padding: 8px 16px;
+    border-radius: 4px;
+  }
+  
+  Button.variant-primary {
+    /* Add styles specific to the primary variant */
+    background-color: #3498db;
+    color: #fff;
+  }
+  
+  /* You can customize further based on your design preferences */
+  

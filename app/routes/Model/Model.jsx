@@ -9,13 +9,12 @@ import {
   Form,
   Icon,
 } from "@shopify/polaris";
-import * as PolarisIcons from "@shopify/polaris-icons";
 
 const Model = ({ open, onClose, title, formik }) => {
   return (
     <Frame>
       <Modal open={open} onClose={onClose} title={title}>
-        <Form onSubmit={formik.handleSubmit}>
+        <Form>
           <Modal.Section>
             <TextField
               label="Todo Name"
@@ -56,7 +55,11 @@ const Model = ({ open, onClose, title, formik }) => {
               </div>
             ) : null}
             <br />
-            <Button variant="primary" tone="success" submit>
+            <Button
+              variant="primary"
+              tone="success"
+              onClick={() => formik.handleSubmit()}
+            >
               Save
             </Button>
             &nbsp;

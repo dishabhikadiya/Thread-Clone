@@ -3,11 +3,11 @@ import { json } from "@remix-run/node";
 import {
   useActionData,
   useLoaderData,
-  useNavigate,
+  useParams,
   useSubmit,
 } from "@remix-run/react";
 import * as Yup from "yup";
-import { Spinner } from "@shopify/polaris";
+import { Button, Spinner, TextField } from "@shopify/polaris";
 import { Page, Frame } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import pagecss from "../demo.css";
@@ -24,19 +24,23 @@ import { useFormik } from "formik";
 export const links = () => [{ rel: "stylesheet", href: pagecss }];
 export const loader = async ({ request, params }) => {
   await authenticate.admin(request);
-  const skip = params ? parseInt(params.id) : 0;
-  const take = 4;
-  const data = await prisma.todo.findMany({
-    skip: skip,
-    take: take,
-    select: {
-      todo: true,
-      status: true,
-      id: true,
-      todolist: true,
-    },
-  });
-  return json({ todos: data, skip, take });
+  try {
+    const data = await prisma.todo.findMany({
+      select: {
+        todo: true,
+        status: true,
+        id: true,
+        todolist: true,
+      },
+    });
+
+    const totalCount = await prisma.todo.count();
+
+    return json({ todos: data, totalCount });
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    throw error;
+  }
 };
 
 export const action = async ({ params, request }) => {
@@ -44,7 +48,69 @@ export const action = async ({ params, request }) => {
   const body = await request.formData();
   const key = body.get("apiKey");
   const id = body.get("id");
+  const requestedPage = parseInt(body.get("page")) || 1;
+  const requestedPageSize = parseInt(body.get("pageSize")) || 5;
+  const skip = (requestedPage - 1) * requestedPageSize;
+  const take = requestedPageSize;
   if (request.method === "POST") {
+    if (key === "get") {
+      const searchTerm = body.get("search");
+      const statusFilter = body.get("status");
+      const sortBy = body.get("sortBy") || "todo";
+      const sortOrder = body.get("sortOrder") || "asc";
+      const whereCondition = {
+        AND: [
+          {
+            OR: [
+              {
+                todo: {
+                  contains: searchTerm,
+                },
+              },
+              {
+                todolist: {
+                  some: {
+                    subTodo: {
+                      contains: searchTerm,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          statusFilter
+            ? {
+                status: {
+                  equals: statusFilter,
+                },
+              }
+            : {},
+        ],
+      };
+
+      const data = await prisma.todo.findMany({
+        where: whereCondition,
+        select: {
+          id: true,
+          todo: true,
+          status: true,
+          todolist: true,
+        },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      });
+
+      return json({
+        todos: data,
+        searchTerm,
+        statusFilter,
+        page: requestedPage,
+        pageSize: requestedPageSize,
+      });
+    }
     if (key === "update") {
       const updateSub = await prisma.todolist.update({
         where: { id: body.get("id") },
@@ -113,9 +179,11 @@ export const action = async ({ params, request }) => {
 
 export default function Index() {
   const loaderdata = useLoaderData();
+  const { page } = useParams();
+  const [searchTerm, setSearchTerm] = useState(loaderdata?.searchTerm || "");
   const actionData = useActionData();
+  const [data, setData] = useState(loaderdata);
   const [loading, setLoading] = useState(true);
-  const Navigate = useNavigate();
   const submit = useSubmit();
   const [active, setActive] = useState(false);
   const [activeDelete, setActiveDelete] = useState(false);
@@ -126,8 +194,12 @@ export default function Index() {
   const [value1, setValue1] = useState();
   const [status, setStatus] = useState();
   const [updateSubData, setUpdateSubData] = useState();
-
   const [subStatus, setSubtatus] = useState();
+  const [sortField, setSortField] = useState("todo");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(5);
   const handleChange1 = useCallback((_, newValue) => setValue1(newValue), []);
   const handleStatus = useCallback((_, newValue) => setStatus(newValue), []);
   const handleStatusData = useCallback(
@@ -138,17 +210,14 @@ export default function Index() {
     (_, newValue) => setSubtatus(newValue),
     []
   );
+  const [totalPages, setTotalPages] = useState(1);
   const todos = loaderdata?.todos?.map((data) => data.id);
   const subId = todos?.todolist?.map((data) => data.id);
   const [id, setId] = useState(todos);
   const [subid, setSubId] = useState(subId);
-  const [skip, setSkip] = useState(loaderdata?.skip || 0);
-  const [take, setTake] = useState(loaderdata?.take || 4);
-
   const [openStates, setOpenStates] = useState(
     loaderdata.todos.map(() => false)
   );
-
   const [value, setValue] = useState();
   const [subTodo, setsubTodo] = useState();
   const [updateSub, setUpdateSub] = useState();
@@ -181,6 +250,7 @@ export default function Index() {
   const handleChangevalue = useCallback((newValue) => setValue(newValue), []);
   const handleChangetodo = useCallback((newValue) => setsubTodo(newValue), []);
   const handleChangeSub = useCallback((newValue) => setUpdateSub(newValue), []);
+
   const handleChangeUpdateTodo = useCallback(
     (newValue) => setUpdateTodo(newValue),
     []
@@ -204,7 +274,7 @@ export default function Index() {
     submit({ id: id }, { method: "DELETE" });
     setActiveDelete(false);
   };
-  const handleUpdate = (values) => {
+  const handleUpdate = () => {
     submit(
       {
         id: id,
@@ -229,23 +299,13 @@ export default function Index() {
       { method: "POST" }
     );
   };
-  const handleNextPage = () => {
-    const newSkip = skip + take;
-    setSkip(newSkip);
-    Navigate(`/app/${newSkip}`);
-  };
-
-  const handlePrevPage = () => {
-    const newSkip = Math.max(skip - take, 0);
-    setSkip(newSkip);
-    Navigate(`/app/${newSkip}`);
-  };
   const YourValidationSchema = Yup.object().shape({
-    todoName: Yup.string().required(),
+    todoName: Yup.string().required("Todo name is required."),
     status: Yup.string().required(),
   });
   const formik = useFormik({
     initialValues: {
+      id: "",
       todoName: "",
       status: "",
     },
@@ -255,12 +315,90 @@ export default function Index() {
         { todo: values.todoName, status: values.status },
         { method: "POST" }
       );
+
       handleSubmit(values);
     },
   });
+  const handleSortChange = (field) => {
+    if (field === sortField) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    handleSearch();
+  };
+
+  const getSortIcon = (field) => {
+    if (field === sortField) {
+      return sortOrder === "asc" ? "↑" : "↓";
+    }
+    return null;
+  };
+
+  const handleSearch = () => {
+    submit(
+      {
+        search: searchTerm,
+        status: statusFilter,
+        apiKey: "get",
+        page: currentPage,
+        pageSize,
+        sortBy: sortField,
+        sortOrder,
+      },
+      { method: "POST" }
+    );
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    submit(
+      { search: searchTerm, apiKey: "get", page: newPage, pageSize },
+      { method: "POST" }
+    );
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      const newPage = currentPage - 1;
+      handlePageChange(newPage);
+    }
+  };
+
+  const handleNextPage = () => {
+    const totalPages = Math.ceil(data.totalCount / pageSize);
+    if (currentPage < totalPages) {
+      const newPage = currentPage + 1;
+      handlePageChange(newPage);
+    }
+  };
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    submit(
+      { search: searchTerm, status: status, apiKey: "get" },
+      { method: "POST" }
+    );
+  };
+  const renderPageNumbers = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(
+        <Button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          primary={currentPage === i}
+        >
+          {i}
+        </Button>
+      );
+    }
+    return pageNumbers;
+  };
 
   useEffect(() => {
     if (actionData) {
+      setData((prevData) => ({ ...prevData, todos: actionData.todos }));
       setActive(false);
       setActivemodel(false);
       setActiveEdit(false);
@@ -268,19 +406,50 @@ export default function Index() {
       setOpenSub(false);
     }
     setLoading(false);
-  }, [actionData]);
+  }, [actionData, searchTerm, statusFilter, page]);
+  useEffect(() => {
+    handleSearch();
+  }, [searchTerm, sortOrder, sortField]);
+  useEffect(() => {
+    if (data.totalCount && pageSize) {
+      const calculatedTotalPages = Math.ceil(data.totalCount / pageSize);
+      setTotalPages(calculatedTotalPages);
+    }
+  }, [data.totalCount, pageSize]);
   return (
     <div style={{ height: "200px" }}>
       {loading ? (
         <Spinner accessibilityLabel="Loading" size="large" color="teal" />
       ) : (
         <Page>
-          <ui-title-bar title="Thread Clone">
-            <button variant="primary" onClick={handleChange}>
+          <ui-title-bar title="Thread Clone"></ui-title-bar>
+          <div className="button-container">
+            <Button variant="primary" onClick={handleChange} size="slim">
               Generate List
-            </button>
-          </ui-title-bar>
-          {loaderdata.todos.map((data, index) => [
+            </Button>
+            <div className="filter-buttons">
+              <Button onClick={() => handleSortChange("todo")}>
+                <span>Todo</span> {getSortIcon("todo")}
+              </Button>
+              <Button onClick={() => handleStatusFilter("complete")}>
+                Complete
+              </Button>
+              <Button onClick={() => handleStatusFilter("in-progress")}>
+                In Progress
+              </Button>
+              <Button onClick={() => handleStatusFilter("")}>All</Button>
+            </div>
+          </div>
+          <br />
+          <TextField
+            label="Todo Search"
+            onChange={(value) => setSearchTerm(value)}
+            onBlur={handleSearch}
+            value={searchTerm}
+            style={{ marginRight: "10px" }}
+          />
+          <br />
+          {data?.todos?.map((data, index) => [
             <>
               <Cards
                 data={data}
@@ -304,14 +473,18 @@ export default function Index() {
             </>,
             <br />,
           ])}
-          <Pagination
-            handleNextPage={handleNextPage}
-            handlePrevPage={handlePrevPage}
-            skip={skip}
-            take={take}
-          />
+          ,
         </Page>
       )}
+      <Pagination
+        handlePrevPage={handlePrevPage}
+        handleNextPage={handleNextPage}
+        currentPage={currentPage}
+        totalPages={Math.ceil(data.totalCount / pageSize)}
+        renderPageNumbers={renderPageNumbers}
+        handlePageChange={handlePageChange}
+      />
+
       <Frame>
         <Model
           open={active}

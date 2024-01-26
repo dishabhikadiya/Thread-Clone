@@ -33,17 +33,17 @@ const Cards = ({
     <div>
       <Card key={index}>
         <div className="content">
-          <p>{data.todo}</p>
+          <p>{data?.todo}</p>
           <Badge
             tone={
-              data.status === "in-progress"
+              data?.status === "in-progress"
                 ? "info"
-                : data.status === "complete"
+                : data?.status === "complete"
                 ? "success"
                 : ""
             }
           >
-            {data.status}
+            {data?.status}
           </Badge>
           <Button
             icon={EditMajor}
@@ -96,42 +96,47 @@ const Cards = ({
         >
           <Divider />
           <br />
-          {data?.todolist?.map((data) => [
-            <div className="content">
-              <span>{data?.subTodo}</span>
-              <Badge
-                tone={
-                  data.status === "in-progress"
-                    ? "info"
-                    : data.status === "complete"
-                    ? "success"
-                    : ""
-                }
-              >
-                {data.status}
-              </Badge>
-            </div>,
-            <div className="btn">
-              <Button
-                icon={EditMajor}
-                variant="monochromePlain"
-                onClick={() => {
-                  handleOpenSub();
-                  setSubId(data.id);
-                  setUpdateSub(data.subTodo);
-                  setUpdateSubData(data.status);
-                }}
-              ></Button>
-              &nbsp; &nbsp;
-              <Button
-                icon={DeleteMajor}
-                variant="monochromePlain"
-                onClick={() => {
-                  handleDelete(), setSubId(data.id);
-                }}
-              ></Button>
-            </div>,
-          ])}
+          {console.log(data)}
+          {data.todolist.map((subData, subIndex) => (
+            <React.Fragment key={subIndex}>
+              {console.log(subData)}
+              <div className="content">
+                <span>{subData?.subTodo}</span>
+                <Badge
+                  tone={
+                    subData?.status === "in-progress"
+                      ? "info"
+                      : subData?.status === "complete"
+                      ? "success"
+                      : ""
+                  }
+                >
+                  {subData?.status}
+                </Badge>
+              </div>
+              <div className="btn">
+                <Button
+                  icon={EditMajor}
+                  variant="monochromePlain"
+                  onClick={() => {
+                    handleOpenSub();
+                    setSubId(subData?.id);
+                    setUpdateSub(subData?.subTodo);
+                    setUpdateSubData(subData?.status);
+                  }}
+                ></Button>
+                &nbsp; &nbsp;
+                <Button
+                  icon={DeleteMajor}
+                  variant="monochromePlain"
+                  onClick={() => {
+                    handleDelete();
+                    setSubId(subData?.id);
+                  }}
+                ></Button>
+              </div>
+            </React.Fragment>
+          ))}
         </Collapsible>
       </Card>
     </div>

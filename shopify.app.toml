@@ -2,7 +2,7 @@
 
 name = "clone"
 client_id = "1ac1e80492380848919cffbfe7b9c4de"
-application_url = "https://tourism-pty-colour-parameters.trycloudflare.com"
+application_url = "https://bikini-field-picture-treat.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -11,9 +11,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://tourism-pty-colour-parameters.trycloudflare.com/auth/callback",
-  "https://tourism-pty-colour-parameters.trycloudflare.com/auth/shopify/callback",
-  "https://tourism-pty-colour-parameters.trycloudflare.com/api/auth/callback"
+  "https://bikini-field-picture-treat.trycloudflare.com/auth/callback",
+  "https://bikini-field-picture-treat.trycloudflare.com/auth/shopify/callback",
+  "https://bikini-field-picture-treat.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
