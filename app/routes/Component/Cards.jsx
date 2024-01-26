@@ -96,10 +96,8 @@ const Cards = ({
         >
           <Divider />
           <br />
-          {console.log(data)}
           {data.todolist.map((subData, subIndex) => (
             <React.Fragment key={subIndex}>
-              {console.log(subData)}
               <div className="content">
                 <span>{subData?.subTodo}</span>
                 <Badge
